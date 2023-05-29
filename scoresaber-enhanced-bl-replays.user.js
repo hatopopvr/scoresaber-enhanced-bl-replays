@@ -1,13 +1,29 @@
+/*
+  This script is a modified version of the "ScoreSaber unranked ACC" UserScript.
+  Original script by motzel can be found at:
+  https://github.com/motzel/scoresaber-unranked-acc
+  
+  Modifications by hatopopvr:
+  - Added feature to fetch and display BeatLeader Replay IDs
+
+*/
+
+/*
+  This script has a known issue with CORS (Cross-Origin Resource Sharing) policy, which may prevent it from fetching data from the BeatLeader API. 
+  A possible workaround for this is to use a browser extension that allows CORS, such as 'CORS Unblock' for Chrome.
+*/
+
+
 // ==UserScript==
-// @name         ScoreSaber unranked ACC
-// @namespace    https://motzel.dev
-// @version      0.4
-// @description  ScoreSaber Enhancements
-// @author       motzel
+// @name         ScoreSaber Enhanced BL Replays (Modified by hatopopvr)
+// @namespace    hatopopvr
+// @version      0.1 (Based on version 0.4 of the original script)
+// @description  ScoreSaber Enhancements with additional features
+// @author       hatopopvr (Original author: motzel)
 // @icon         https://scoresaber.com/favicon-32x32.png
-// @updateURL    https://github.com/motzel/scoresaber-unranked-acc/raw/master/scoresaber-unranked-acc.user.js
-// @downloadURL  https://github.com/motzel/scoresaber-unranked-acc/raw/master/scoresaber-unranked-acc.user.js
-// @supportURL   https://github.com/motzel/scoresaber-unranked-acc/issues
+// @updateURL    https://github.com/hatopopvr/scoresaber-enhanced-bl-replays/raw/master/scoresaber-enhanced-bl-replays.user.js
+// @downloadURL  https://github.com/hatopopvr/scoresaber-enhanced-bl-replays/raw/master/scoresaber-enhanced-bl-replays.user.js
+// @supportURL   https://github.com/hatopopvr/scoresaber-enhanced-bl-replays/issues
 // @match        https://scoresaber.com/u/*
 // @grant        unsafeWindow
 // @run-at       document-start
@@ -228,24 +244,53 @@
         // skip if replayBtn is already added
         if (lastEl.querySelector('.replay')) return;
 
-        if (scores[idx].pp && scores[idx].rank <= 500) {
-          const link = `https://www.replay.beatleader.xyz/?id=${scores[idx].beatSaver.id}&difficulty=${scores[idx].beatSaver.diff.difficulty}&playerID=${params.playerId}`
+        // This function fetches the replay id from BeatLeader API.
+        // Note: This script has a known issue with CORS (Cross-Origin Resource Sharing) policy, 
+        // which may prevent it from fetching data from the BeatLeader API. 
+        // A possible workaround for this is to use a browser extension that allows CORS, such as 'CORS Unblock' for Chrome.
+        async function fetchReplayId(playerId, hash, difficulty, mode = "Standard") {
+            const url = `https://api.beatleader.xyz/player/${playerId}/scores?sortBy=date&page=1&count=5000&search=${hash}&diff=${difficulty}&mode=${mode}`;
+            console.log(url);
 
-          const replayButton = window.document.createElement('button');
-          replayButton.title = 'Replay';
-          replayButton.className = `stat clickable bsr ${existingElClassName}`;
-
-          const icon = window.document.createElement('i');
-          icon.className = 'fas fa-play';
-          replayButton.append(icon);
-
-          const replayLink = window.document.createElement('a');
-          replayLink.href = link;
-          replayLink.target = "_blank";
-          replayLink.prepend(replayButton);
-
-          lastEl.append(replayLink);
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            console.log(data.data[0].id);
+            return data.data[0].id;
         }
+
+        if (scores[idx].pp) {
+
+            const playerId = params.playerId;
+            const hash = scores[idx].hash;
+            const difficulty = scores[idx].beatSaver.diff.difficulty;
+
+            fetchReplayId(playerId, hash, difficulty).then(replayId => {
+                if (replayId !== null) {
+                    const link = `https://replay.beatleader.xyz/?scoreId=${replayId}`;
+
+                    const replayButton = window.document.createElement('button');
+                    replayButton.title = 'Replay';
+                    replayButton.className = `stat clickable bsr ${existingElClassName}`;
+
+                    const icon = window.document.createElement('i');
+                    icon.className = 'fas fa-play';
+                    replayButton.append(icon);
+
+                    const replayLink = window.document.createElement('a');
+                    replayLink.href = link;
+                    replayLink.target = "_blank";
+                    replayLink.prepend(replayButton);
+
+                    lastEl.append(replayLink);
+
+                    console.log(link);
+                }
+            });
+        }
+
         // skip if acc stat is already added
         if (scoreInfoChilds?.length !== 1 || scoreInfoChilds[0].querySelector('.stat.acc')) return;
 
