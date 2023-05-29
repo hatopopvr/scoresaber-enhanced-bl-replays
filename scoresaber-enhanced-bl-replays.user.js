@@ -17,8 +17,8 @@
 // ==UserScript==
 // @name         ScoreSaber Enhanced BL Replays (Modified by hatopopvr)
 // @namespace    hatopopvr
-// @version      0.1 (Based on version 0.4 of the original script)
-// @description  ScoreSaber Enhancements with additional features
+// @version      0.1.1
+// @description  ScoreSaber Enhancements with additional features (Based on version 0.4 of the original script)
 // @author       hatopopvr (Original author: motzel)
 // @icon         https://scoresaber.com/favicon-32x32.png
 // @updateURL    https://github.com/hatopopvr/scoresaber-enhanced-bl-replays/raw/master/scoresaber-enhanced-bl-replays.user.js
@@ -159,8 +159,7 @@
         const bpm = data?.metadata?.bpm ?? null;
         const versions = data?.versions ?? null;
 
-        if (!id || !bpm || !versions?.length || !versions?.[versions.length - 1]?.diffs)
-          throw `API returned invalid data`;
+        if (!id || !bpm || !versions?.length || !versions?.[versions.length - 1]?.diffs) throw `API returned invalid data`;
 
         return setCache(hash, {hash, id, bpm, diffs: versions?.[versions.length - 1]?.diffs});
       } catch (e) {
@@ -261,7 +260,9 @@
             return data.data[0].id;
         }
 
-        if (scores[idx].pp) {
+        console.log(scores[idx].modifiedScore);
+
+        if (scores[idx].modifiedScore) {
 
             const playerId = params.playerId;
             const hash = scores[idx].hash;
