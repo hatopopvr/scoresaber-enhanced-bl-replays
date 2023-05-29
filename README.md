@@ -1,3 +1,5 @@
+[README(日本語)](README_JP.md)
+
 # About
 
 This is a modified version of the script that adds ACC to unranked scores on [Score Saber](https://scoresaber.com) website. This version additionally fetches replay IDs from the BeatLeader API. The [original script](https://github.com/motzel/scoresaber-unranked-acc) was created by [motzel](https://github.com/motzel), and this modified version was created by hatopopvr.
