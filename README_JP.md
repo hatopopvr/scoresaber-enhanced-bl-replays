@@ -2,7 +2,7 @@
 
 # About
 
-[Score Saber](https://scoresaber.com) のウェブサイトで非ランキングのスコアにACCを追加するスクリプト scoresaber-unranked-acc の改造版です。このバージョンでは、BeatLeader API からリプレイIDを取得しリンクを生成します。[オリジナルのスクリプト](https://github.com/motzel/scoresaber-unranked-acc) は [motzel](https://github.com/motzel) 氏によって作成され、この改造版は hatopopvr が作成しています。
+[Score Saber](https://scoresaber.com) のウェブサイトでアンランクのスコアにACCを追加するスクリプト scoresaber-unranked-acc の改造版です。このバージョンでは、[BeatLeader](https://www.beatleader.xyz/) API からリプレイIDを取得しリンクを生成します。[オリジナルのスクリプト](https://github.com/motzel/scoresaber-unranked-acc) は [motzel](https://github.com/motzel) 氏によって作成され、この改造版は hatopopvr が作成しています。
 
 ## インストール方法
 
