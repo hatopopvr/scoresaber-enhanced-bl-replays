@@ -14,3 +14,6 @@ Get Tampermonkey for [Chrome/Edge Chromium](https://chrome.google.com/webstore/d
 
 This script may encounter issues with CORS (Cross-Origin Resource Sharing) policy, preventing it from fetching data from the BeatLeader API. A possible workaround for this issue is to use a browser extension that allows CORS, such as [CORS Unblock for Chrome](https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino).
 
+## Data Storage
+
+This script uses the local storage feature provided by Tampermonkey to cache the ReplayId for each score. The purpose of this caching is to reduce the number of requests made to the BeatLeader API and improve the performance of the script. The stored data includes the playerId, hash, difficulty, and modifiedScore of each score, and the corresponding ReplayId. This data is used only for the functionality of this script and is not shared with any other scripts or services.

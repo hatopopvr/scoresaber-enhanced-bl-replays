@@ -9,15 +9,21 @@
 */
 
 /*
-  This script has a known issue with CORS (Cross-Origin Resource Sharing) policy, which may prevent it from fetching data from the BeatLeader API. 
+  This script has a known issue with CORS (Cross-Origin Resource Sharing) policy, which may prevent it from fetching data from the BeatLeader API.
   A possible workaround for this is to use a browser extension that allows CORS, such as 'CORS Unblock' for Chrome.
+
+  Additionally, this script implements a caching feature for ReplayId.
+  Using Tampermonkey's built-in local storage functionality, it stores the ReplayId of each score as a cache.
+  This helps in reducing the number of requests made to the BeatLeader API, thereby enhancing the script's performance.
+  The data stored includes the playerId, hash, difficulty, modifiedScore, and corresponding ReplayId for each score.
+  This data is solely used for facilitating the functionalities of this script and is not shared with any other scripts or services.
 */
 
 
 // ==UserScript==
 // @name         ScoreSaber Enhanced BL Replays (Modified by hatopopvr)
 // @namespace    hatopopvr
-// @version      0.1.2
+// @version      0.1.3
 // @description  ScoreSaber Enhancements with additional features (Based on version 0.4 of the original script)
 // @author       hatopopvr (Original author: motzel)
 // @icon         https://scoresaber.com/favicon-32x32.png
@@ -26,6 +32,8 @@
 // @supportURL   https://github.com/hatopopvr/scoresaber-enhanced-bl-replays/issues
 // @match        https://scoresaber.com/u/*
 // @grant        unsafeWindow
+// @grant        GM_setValue
+// @grant        GM_getValue
 // @run-at       document-start
 // ==/UserScript==
 
@@ -243,28 +251,50 @@
         // skip if replayBtn is already added
         if (lastEl.querySelector('.replay')) return;
 
+
         // This function fetches the replay id from BeatLeader API.
-        // Note: This script has a known issue with CORS (Cross-Origin Resource Sharing) policy, 
-        // which may prevent it from fetching data from the BeatLeader API. 
+        // Note: This script has a known issue with CORS (Cross-Origin Resource Sharing) policy,
+        // which may prevent it from fetching data from the BeatLeader API.
         // A possible workaround for this is to use a browser extension that allows CORS, such as 'CORS Unblock' for Chrome.
-        async function fetchReplayId(playerId, hash, difficulty, mode = "Standard") {
-            const url = `https://api.beatleader.xyz/player/${playerId}/scores?sortBy=date&page=1&count=5000&search=${hash}&diff=${difficulty}&mode=${mode}`;
-            console.log(url);
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            return data.data[0]?.id || null;
+
+        // Additionally, this script implements a caching feature for ReplayId.
+        // Using Tampermonkey's built-in local storage functionality, it stores the ReplayId of each score as a cache.
+        // This helps in reducing the number of requests made to the BeatLeader API, thereby enhancing the script's performance.
+        // The data stored includes the playerId, hash, difficulty, modifiedScore, and corresponding ReplayId for each score.
+        // This data is solely used for facilitating the functionalities of this script and is not shared with any other scripts or services.
+        // キーの生成
+        function generateKey(playerId, hash, difficulty, modifiedScore) {
+            return playerId + hash + difficulty + modifiedScore;
         }
 
-        if (scores[idx].modifiedScore) {
+        // リプレイIDの取得または保存
+        async function fetchOrGetReplayId(playerId, hash, difficulty, modifiedScore, mode = "Standard") {
+            const key = generateKey(playerId, hash, difficulty, modifiedScore);
+            let replayId = GM_getValue(key);
 
+            if (!replayId) {
+                const url = `https://api.beatleader.xyz/player/${playerId}/scores?sortBy=date&page=1&count=5000&search=${hash}&diff=${difficulty}&mode=${mode}`;
+                console.log(url);
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                replayId = data.data[0]?.id || null;
+                GM_setValue(key, replayId);
+            }
+
+            return replayId;
+        }
+
+
+        if (scores[idx].modifiedScore) {
             const playerId = params.playerId;
             const hash = scores[idx].hash;
             const difficulty = scores[idx].beatSaver.diff.difficulty;
+            const modifiedScore = scores[idx].modifiedScore;
 
-            fetchReplayId(playerId, hash, difficulty).then(replayId => {
+            fetchOrGetReplayId(playerId, hash, difficulty, modifiedScore).then(replayId => {
                 if (replayId !== null) {
                     const link = `https://replay.beatleader.xyz/?scoreId=${replayId}`;
 

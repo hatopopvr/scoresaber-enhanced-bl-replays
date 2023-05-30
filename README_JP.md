@@ -13,3 +13,7 @@
 ## 既知の問題
 
 このスクリプトは、CORS (Cross-Origin Resource Sharing) ポリシーの制約により、BeatLeader API からデータを取得できない問題があります。[CORS Unblock for Chrome](https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino) などのCORSを許可するブラウザ拡張機能を使用するなどして、この問題の回避する必要があります。
+
+## データ保存について
+
+本スクリプトは、Tampermonkeyが提供するローカルストレージ機能を利用し、各スコアのReplayIdをキャッシュとして保存します。これは、BeatLeader APIへのリクエスト数を減らし、スクリプトのパフォーマンスを向上させるためのものです。保存されるデータには、各スコアのplayerId、hash、difficulty、modifiedScore、及びそれに対応するReplayIdが含まれます。これらのデータは、本スクリプトの機能を実現するためだけに使用され、他のスクリプトやサービスと共有されることはありません。
