@@ -33,3 +33,9 @@
 - Score improvement (scoreImprovement)
 
 さらに、各スコアのplayerId、hash、difficulty、modifiedScore、modeも保存されます。これらのデータは、本スクリプトの機能を実現するためだけに使用され、他のスクリプトやサービスと共有されることはありません。
+
+## 免責事項
+
+本スクリプトは、[CORS Unblock for Chrome](https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino) などのブラウザ拡張機能を使用して、CORS (Cross-Origin Resource Sharing) ポリシーを緩和することを必要とします。これにより、あなたのブラウザは通常よりもセキュリティが低下する可能性があります。このスクリプトを使用することで、そのリスクを受け入れることに同意したものとします。
+
+また、スクリプトの作者は、スクリプトの使用により生じる可能性のあるいかなる損害に対しても責任を負いません。ユーザー自身がスクリプトを使用する際のリスクを全て理解し、その上で自己責任でスクリプトを使用することを同意したものとみなします。

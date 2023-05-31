@@ -33,3 +33,9 @@ This script utilizes the local storage functionality provided by Tampermonkey to
 - Score improvement (scoreImprovement)
 
 In addition, playerId, hash, difficulty, modifiedScore, and mode of each score are stored. This data is used solely for the purpose of facilitating the functionality of this script and is not shared with any other scripts or services.
+
+## Disclaimer
+
+This script requires the use of a browser extension such as [CORS Unblock for Chrome](https://chrome.google.com/webstore/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino) to loosen the CORS (Cross-Origin Resource Sharing) policy. As a result, your browser's security may be reduced more than usual. By using this script, you agree to accept this risk.
+
+Moreover, the author of this script shall not be liable for any potential damage that may arise from the use of the script. It is assumed that the user fully understands all risks associated with using the script and agrees to use it at their own risk.
