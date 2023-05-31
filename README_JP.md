@@ -2,7 +2,8 @@
 
 # About
 
-[Score Saber](https://scoresaber.com) のウェブサイトでアンランクのスコアにACCを追加するスクリプト scoresaber-unranked-acc の改造版です。このバージョンでは、[BeatLeader](https://www.beatleader.xyz/) API からリプレイIDを取得しリンクを生成します。[オリジナルのスクリプト](https://github.com/motzel/scoresaber-unranked-acc) は [motzel](https://github.com/motzel) 氏によって作成され、この改造版は hatopopvr が作成しています。
+[Score Saber](https://scoresaber.com) のウェブサイトでアンランクのスコアにACCを追加するスクリプト scoresaber-unranked-acc の改造版です。このバージョンでは、[BeatLeader](https://www.beatleader.xyz/) API からBeatLeaderのReplayIdを含むスコアデータを取得し、リプレイリンクを生成します。[オリジナルのスクリプト](https://github.com/motzel/scoresaber-unranked-acc) は [motzel](https://github.com/motzel) 氏によって作成され、この改造版は hatopopvr が作成しています。
+
 
 ## インストール方法
 
@@ -16,4 +17,18 @@
 
 ## データ保存について
 
-本スクリプトは、Tampermonkeyが提供するローカルストレージ機能を利用し、各スコアのReplayIdをキャッシュとして保存します。これは、BeatLeader APIへのリクエスト数を減らし、スクリプトのパフォーマンスを向上させるためのものです。保存されるデータには、各スコアのplayerId、hash、difficulty、modifiedScore、及びそれに対応するReplayIdが含まれます。これらのデータは、本スクリプトの機能を実現するためだけに使用され、他のスクリプトやサービスと共有されることはありません。
+本スクリプトは、Tampermonkeyが提供するローカルストレージ機能を利用し、各スコアのBeatLeaderから取得したスコアデータをキャッシュとして保存します。これは、BeatLeader APIへのリクエスト数を減らし、スクリプトのパフォーマンスを向上させるためのものです。保存されるデータには以下の項目が含まれます：
+
+- Left hand accuracy (accLeft)
+- Right hand accuracy (accRight)
+- Replay id (id)
+- Accuracy (accuracy)
+- Full combo accuracy (fcAccuracy)
+- Number of bad cuts (badCuts)
+- Number of missed notes (missedNotes)
+- Number of bomb cuts (bombCuts)
+- Number of wall hits (wallHit)
+- Number of pauses (pauses)
+- Score improvement (scoreImprovement)
+
+さらに、各スコアのplayerId、hash、difficulty、modifiedScore、modeも保存されます。これらのデータは、本スクリプトの機能を実現するためだけに使用され、他のスクリプトやサービスと共有されることはありません。

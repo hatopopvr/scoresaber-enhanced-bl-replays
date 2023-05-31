@@ -2,7 +2,7 @@
   This script is a modified version of the "ScoreSaber unranked ACC" UserScript.
   Original script by motzel can be found at:
   https://github.com/motzel/scoresaber-unranked-acc
-  
+
   Modifications by hatopopvr:
   - Added feature to fetch and display BeatLeader Replay IDs
 
@@ -23,7 +23,7 @@
 // ==UserScript==
 // @name         ScoreSaber Enhanced BL Replays (Modified by hatopopvr)
 // @namespace    hatopopvr
-// @version      0.1.3
+// @version      0.1.4
 // @description  ScoreSaber Enhancements with additional features (Based on version 0.4 of the original script)
 // @author       hatopopvr (Original author: motzel)
 // @icon         https://scoresaber.com/favicon-32x32.png
@@ -53,7 +53,12 @@
     5: 'Hard',
     7: 'Expert',
     9: 'ExpertPlus',
-  }
+  };
+
+  const modes = {
+      'SoloStandard': 'Standard',
+      'SoloLawless': 'Lawless',
+  };
 
   let lastParams = null;
   const scoresCache = {};
@@ -252,27 +257,55 @@
         if (lastEl.querySelector('.replay')) return;
 
 
-        // This function fetches the replay id from BeatLeader API.
-        // Note: This script has a known issue with CORS (Cross-Origin Resource Sharing) policy,
-        // which may prevent it from fetching data from the BeatLeader API.
-        // A possible workaround for this is to use a browser extension that allows CORS, such as 'CORS Unblock' for Chrome.
-
-        // Additionally, this script implements a caching feature for ReplayId.
-        // Using Tampermonkey's built-in local storage functionality, it stores the ReplayId of each score as a cache.
-        // This helps in reducing the number of requests made to the BeatLeader API, thereby enhancing the script's performance.
-        // The data stored includes the playerId, hash, difficulty, modifiedScore, and corresponding ReplayId for each score.
-        // This data is solely used for facilitating the functionalities of this script and is not shared with any other scripts or services.
-        // キーの生成
-        function generateKey(playerId, hash, difficulty, modifiedScore) {
-            return playerId + hash + difficulty + modifiedScore;
+        // Function to extract necessary information from the provided data and create a new object
+        function extractRequiredData(data) {
+            return {
+                accLeft: data.accLeft,
+                accRight: data.accRight,
+                id: data.id,
+                accuracy: data.accuracy,
+                fcAccuracy: data.fcAccuracy,
+                badCuts: data.badCuts,
+                missedNotes: data.missedNotes,
+                bombCuts: data.bombCuts,
+                wallHit: data.wallHit,
+                pauses: data.pauses,
+                scoreImprovement: data.scoreImprovement
+            };
         }
 
-        // リプレイIDの取得または保存
-        async function fetchOrGetReplayId(playerId, hash, difficulty, modifiedScore, mode = "Standard") {
-            const key = generateKey(playerId, hash, difficulty, modifiedScore);
-            let replayId = GM_getValue(key);
+        // Function to generate a key using the playerId, hash, difficulty, modifiedScore, and mode as arguments
+        function generateKey(playerId, hash, difficulty, modifiedScore, mode) {
+            return playerId + hash + difficulty + modifiedScore + mode;
+        }
 
-            if (!replayId) {
+        /**
+         * This function is aimed to retrieve the score data including ReplayId from the BeatLeader API.
+         * Note: This script has a known issue with CORS (Cross-Origin Resource Sharing) policy,
+         * which may prevent it from fetching data from the BeatLeader API.
+         * A possible workaround for this is to use a browser extension that allows CORS, such as 'CORS Unblock' for Chrome.
+         *
+         * Additionally, this script implements a caching feature for the retrieved BeatLeader score data.
+         * Using Tampermonkey's built-in local storage functionality, it stores the retrieved BeatLeader score data as a cache.
+         * This helps in reducing the number of requests made to the BeatLeader API, thereby enhancing the script's performance.
+         * The data stored includes the playerId, hash, difficulty, modifiedScore, and relevant score data including ReplayId.
+         * This data is solely used for facilitating the functionalities of this script and is not shared with any other scripts or services.
+         *
+         * Function to retrieve BeatLeader score data for a given key.
+         * If the data specified by the key does not exist in the storage, it retrieves it from the API.
+         *
+         * @param {string} playerId - The unique identifier of the player.
+         * @param {string} hash - The unique hash of the song.
+         * @param {string} difficulty - The difficulty level of the song.
+         * @param {number} modifiedScore - The modified score of the player for the song.
+         * @param {string} mode - The game mode (default: "Standard").
+         * @returns {object|null} The BeatLeader score data if available; null otherwise.
+         */
+        async function fetchOrGetBeatLeaderScoreData(playerId, hash, difficulty, modifiedScore, mode = "Standard") {
+            const key = generateKey(playerId, hash, difficulty, modifiedScore, mode);
+            let beatLeaderScoreData = GM_getValue(key);
+
+            if (!beatLeaderScoreData) {
                 const url = `https://api.beatleader.xyz/player/${playerId}/scores?sortBy=date&page=1&count=5000&search=${hash}&diff=${difficulty}&mode=${mode}`;
                 console.log(url);
                 const response = await fetch(url);
@@ -280,26 +313,38 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
-                replayId = data.data[0]?.id || null;
-                GM_setValue(key, replayId);
+                if (!data.data[0]) {
+                    return null; // return null if no data is available
+                }
+                beatLeaderScoreData = extractRequiredData(data.data[0]);
+                GM_setValue(key, beatLeaderScoreData);
             }
 
-            return replayId;
+            return beatLeaderScoreData;
         }
-
 
         if (scores[idx].modifiedScore) {
             const playerId = params.playerId;
             const hash = scores[idx].hash;
             const difficulty = scores[idx].beatSaver.diff.difficulty;
             const modifiedScore = scores[idx].modifiedScore;
+            const gameMode = scores[idx].difficulty.gameMode;
+            const mode = modes[gameMode] || 'Standard';
 
-            fetchOrGetReplayId(playerId, hash, difficulty, modifiedScore).then(replayId => {
-                if (replayId !== null) {
-                    const link = `https://replay.beatleader.xyz/?scoreId=${replayId}`;
+            fetchOrGetBeatLeaderScoreData(playerId, hash, difficulty, modifiedScore, mode).then(beatLeaderScoreData => {
+                if (beatLeaderScoreData !== null) {
+//                     console.log(beatLeaderScoreData);
+
+                    const link = `https://replay.beatleader.xyz/?scoreId=${beatLeaderScoreData.id}`;
 
                     const replayButton = window.document.createElement('button');
-                    replayButton.title = 'BL-Replay';
+
+                    // Ensure that accLeft, accRight, and pauses are defined, else display 'N/A'
+                    const fcAccText = beatLeaderScoreData.fcAccuracy !== undefined ? (beatLeaderScoreData.fcAccuracy * 100).toFixed(2) : 'N/A';
+                    const accLeftText = beatLeaderScoreData.accLeft !== undefined ? beatLeaderScoreData.accLeft.toFixed(2) : 'N/A';
+                    const accRightText = beatLeaderScoreData.accRight !== undefined ? beatLeaderScoreData.accRight.toFixed(2) : 'N/A';
+                    const pausesText = beatLeaderScoreData.pauses !== undefined ? beatLeaderScoreData.pauses : 'N/A';
+                    replayButton.title = `BL-Replay\nFcAcc: ${fcAccText}%\nAccLeft: ${accLeftText}\nAccRight: ${accRightText}\nPauses: ${pausesText}`;
                     replayButton.className = `stat clickable bsr ${existingElClassName}`;
                     replayButton.style.color = "#FFFFFF";
 
