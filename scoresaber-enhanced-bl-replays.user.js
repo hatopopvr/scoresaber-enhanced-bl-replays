@@ -23,7 +23,7 @@
 // ==UserScript==
 // @name         ScoreSaber Enhanced BL Replays (Modified by hatopopvr)
 // @namespace    hatopopvr
-// @version      0.1.4
+// @version      0.2.0
 // @description  ScoreSaber Enhancements with additional features (Based on version 0.4 of the original script)
 // @author       hatopopvr (Original author: motzel)
 // @icon         https://scoresaber.com/favicon-32x32.png
@@ -211,6 +211,8 @@
 
         const scoreInfoChilds = [...el.querySelectorAll('.scoreInfo > div')];
 
+        const firstEl = scoreInfoChilds?.[0]; //
+
         const lastEl = scoreInfoChilds?.[scoreInfoChilds?.length - 1];
 
         if (!scoreInfoChilds?.length || lastEl.querySelector('.bsr')) return;
@@ -331,35 +333,151 @@
             const gameMode = scores[idx].difficulty.gameMode;
             const mode = modes[gameMode] || 'Standard';
 
+            // Replayボタンの作成と設定
+            function createReplayButton(existingElClassName, fcAccText, accLeftText, accRightText, pausesText, link) {
+              const replayButton = window.document.createElement('button');
+              replayButton.title = `BL-Replay\nFcAcc: ${fcAccText}%\nAccLeft: ${accLeftText}\nAccRight: ${accRightText}\nPauses: ${pausesText}`;
+              replayButton.className = `stat clickable bsr ${existingElClassName}`;
+              replayButton.style.color = "#FFFFFF";
+              const icon = window.document.createElement('i');
+              icon.className = 'fas fa-play';
+              replayButton.append(icon);
+              const replayLink = window.document.createElement('a');
+              replayLink.href = link;
+              replayLink.target = "_blank";
+              replayLink.prepend(replayButton);
+
+              return replayLink;
+            }
+
+            // LeftとRightのスコア表示エレメントの作成
+            function createScoreElements(accLeftText, accRightText) {
+              const leftDiv = createScoreElement('stat acc svelte-1hsacpa', '#f14668', 'AccLeft', accLeftText);
+              const rightDiv = createScoreElement('stat acc svelte-1hsacpa', '#192dfb', 'AccRight', accRightText);
+
+              return { leftDiv, rightDiv };
+            }
+
+            function createScoreElement(className, bgColor, title, text) {
+              const div = window.document.createElement('span');
+              div.className = className;
+              div.style.backgroundColor = bgColor;
+              const span = window.document.createElement('span');
+              span.className = 'info svelte-1hsacpa';
+              span.style.color = 'white';
+              span.textContent = text;
+              span.title = title;
+              div.append(span);
+
+              return div;
+            }
+
+            // Improvement情報の追加
+            function addImprovementInformation(firstEl, lastEl, leftDiv, rightDiv, beatLeaderScoreData) {
+              // Add improvement information
+              if (beatLeaderScoreData.scoreImprovement.accuracy !== 0) {
+                  addAccuracyImprovement(firstEl, beatLeaderScoreData);
+                  addAccLeftImprovement(leftDiv, beatLeaderScoreData);
+                  addAccRightImprovement(rightDiv, beatLeaderScoreData);
+                  addMissedBadCutImprovement(lastEl, beatLeaderScoreData);
+              }
+            }
+
+            // Accuracy improvementの追加
+            function addAccuracyImprovement(firstEl, beatLeaderScoreData) {
+              const accSpan = firstEl.querySelector('span[title="Accuracy"]');
+
+              if (accSpan && beatLeaderScoreData.scoreImprovement !== undefined) {
+                  const accImprovementPercent = (beatLeaderScoreData.scoreImprovement.accuracy * 100).toFixed(2);
+                  const accImprovementSpan = document.createElement('span');
+                  accImprovementSpan.textContent = ` +${accImprovementPercent}%`;
+                  accImprovementSpan.className = "small info svelte-1hsacpa";
+                  accSpan.appendChild(accImprovementSpan);
+              }
+            }
+
+            // AccLeft improvementの追加
+            function addAccLeftImprovement(leftDiv, beatLeaderScoreData) {
+              const accLeftImprovementPercent = (beatLeaderScoreData.scoreImprovement.accLeft).toFixed(2);
+              const accLeftImprovementSpan = document.createElement('span');
+              accLeftImprovementSpan.textContent = ` ${accLeftImprovementPercent > 0 ? "+" : ""}${accLeftImprovementPercent}`;
+              accLeftImprovementSpan.className = "small info svelte-1hsacpa";
+              leftDiv.appendChild(accLeftImprovementSpan);
+            }
+
+            // AccRight improvementの追加
+            function addAccRightImprovement(rightDiv, beatLeaderScoreData) {
+              const accRightImprovementPercent = (beatLeaderScoreData.scoreImprovement.accRight).toFixed(2);
+              const accRightImprovementSpan = document.createElement('span');
+              accRightImprovementSpan.textContent = ` ${accRightImprovementPercent > 0 ? "+" : ""}${accRightImprovementPercent}`;
+              accRightImprovementSpan.className = "small info svelte-1hsacpa";
+              rightDiv.appendChild(accRightImprovementSpan);
+            }
+
+            // Missed & Bad Cut improvementの追加
+            function addMissedBadCutImprovement(lastEl, beatLeaderScoreData) {
+              const elements = [...lastEl.querySelectorAll('[title*="Missed"], [title*="Full Combo"]')];
+
+              elements.forEach(element => {
+                  let missedValue = 0;
+                  let badCutValue = 0;
+
+                  // Only extract values if title contains 'Missed'
+                  if (element.title.includes("Missed")) {
+                      const { missedValue: extractedMissed, badCutValue: extractedBadCut } = extractValuesFromTitle(element.title);
+                      missedValue = extractedMissed;
+                      badCutValue = extractedBadCut;
+                  }
+
+                  const totalNotesImprovement = beatLeaderScoreData.scoreImprovement.missedNotes + beatLeaderScoreData.scoreImprovement.badCuts;
+                  const missImprovement = missedValue + badCutValue - totalNotesImprovement;
+                  const missImprovementSpan = document.createElement('span');
+                  if (missImprovement === 0) {
+                      missImprovementSpan.textContent = ' vs FC';
+                  } else {
+                      missImprovementSpan.textContent = ` vs ${missImprovement}`;
+                  }
+                  missImprovementSpan.className = "small info svelte-1hsacpa";
+                  element.appendChild(missImprovementSpan);
+              });
+            }
+
+            // Missed & Bad Cut valuesの抽出
+            function extractValuesFromTitle(title) {
+              const missedMatch = title.match(/Missed: (\d+)/);
+              const missedValue = missedMatch ? Number(missedMatch[1]) : 0;
+
+              const badCutMatch = title.match(/Bad Cut: (\d+)/);
+              const badCutValue = badCutMatch ? Number(badCutMatch[1]) : 0;
+
+              return { missedValue, badCutValue };
+            }
+
+
             fetchOrGetBeatLeaderScoreData(playerId, hash, difficulty, modifiedScore, mode).then(beatLeaderScoreData => {
                 if (beatLeaderScoreData !== null) {
-//                     console.log(beatLeaderScoreData);
+                    // console.log(beatLeaderScoreData);
 
                     const link = `https://replay.beatleader.xyz/?scoreId=${beatLeaderScoreData.id}`;
-
-                    const replayButton = window.document.createElement('button');
-
                     // Ensure that accLeft, accRight, and pauses are defined, else display 'N/A'
                     const fcAccText = beatLeaderScoreData.fcAccuracy !== undefined ? (beatLeaderScoreData.fcAccuracy * 100).toFixed(2) : 'N/A';
                     const accLeftText = beatLeaderScoreData.accLeft !== undefined ? beatLeaderScoreData.accLeft.toFixed(2) : 'N/A';
                     const accRightText = beatLeaderScoreData.accRight !== undefined ? beatLeaderScoreData.accRight.toFixed(2) : 'N/A';
                     const pausesText = beatLeaderScoreData.pauses !== undefined ? beatLeaderScoreData.pauses : 'N/A';
-                    replayButton.title = `BL-Replay\nFcAcc: ${fcAccText}%\nAccLeft: ${accLeftText}\nAccRight: ${accRightText}\nPauses: ${pausesText}`;
-                    replayButton.className = `stat clickable bsr ${existingElClassName}`;
-                    replayButton.style.color = "#FFFFFF";
 
-                    const icon = window.document.createElement('i');
-                    icon.className = 'fas fa-play';
-                    replayButton.append(icon);
-
-                    const replayLink = window.document.createElement('a');
-                    replayLink.href = link;
-                    replayLink.target = "_blank";
-                    replayLink.prepend(replayButton);
-
+                    // createReplayButton
+                    const replayLink = createReplayButton(existingElClassName, fcAccText, accLeftText, accRightText, pausesText, link)
                     lastEl.append(replayLink);
 
+                    // create Left Right Acc Element
+                    const { leftDiv, rightDiv } = createScoreElements(accLeftText, accRightText)
+                    firstEl.append(leftDiv, rightDiv);
+
+                    // addImprovementInformation
+                    addImprovementInformation(firstEl, lastEl, leftDiv, rightDiv, beatLeaderScoreData);
+
                     console.log(link);
+
                 } else {
                     if (scores[idx].pp && scores[idx].rank <= 500) {
                         const link = `https://www.replay.beatleader.xyz/?id=${scores[idx].beatSaver.id}&difficulty=${scores[idx].beatSaver.diff.difficulty}&playerID=${params.playerId}`
