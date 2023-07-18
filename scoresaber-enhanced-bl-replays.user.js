@@ -23,7 +23,7 @@
 // ==UserScript==
 // @name         ScoreSaber Enhanced BL Replays (Modified by hatopopvr)
 // @namespace    hatopopvr
-// @version      0.2.0
+// @version      0.3.0
 // @description  ScoreSaber Enhancements with additional features (Based on version 0.4 of the original script)
 // @author       hatopopvr (Original author: motzel)
 // @icon         https://scoresaber.com/favicon-32x32.png
@@ -193,10 +193,161 @@
     const paramsHash = getParamsHash(params);
     const scores = scoresCache[paramsHash];
 
+      // 表示制御ボタンがクリックされたときに実行する関数
+      function hiddenButtonClick(buttonId, className) {
+          // console.log("hidden Button clicked");
+          let elements = document.getElementsByClassName(className);
+          let displayState = GM_getValue(buttonId, "inline");
+          displayState = (displayState === "none") ? "inline" : "none";
+
+          for(let i = 0; i < elements.length; i++){
+              elements[i].style.display = displayState;
+          }
+
+          GM_setValue(buttonId, displayState);
+          return displayState;
+      }
+
+      // 幅制御ボタンがクリックされたときに実行する関数
+      function widthButtonClick(buttonId, className) {
+        // console.log("width Button clicked");
+        let elements = document.getElementsByClassName(className);
+        let displayState = GM_getValue(buttonId, "inline");
+        displayState = (displayState === "none") ? "inline" : "none";
+
+        // 取得した各要素に対してスタイルを適用する
+        for (let i = 0; i < elements.length; i++) {
+          if (displayState === "none") {
+            // もし現在がautoなら、130pxに設定する
+            elements[i].style.width = '130px';
+            elements[i].style.textAlign = 'center';
+            elements[i].style.margin = '2px 2px';
+            elements[i].style.padding = '5px 0px';
+
+          } else {
+            // もし現在が130pxなら、autoに設定する
+            elements[i].style.width = 'auto';
+            elements[i].style.margin = '4px 5px';
+            elements[i].style.padding = '5px 7px';
+          }
+        }
+        GM_setValue(buttonId, displayState);
+        return displayState;
+
+      }
+
+
+      // infoボタンにclass付与
+      function addClassToInfoButton(){
+          // 指定した要素を全て取得します。
+          let elements = document.querySelectorAll('span.stat.clickable.svelte-1hsacpa > i.fas.fa-info-circle');
+
+          // それぞれの要素について、親要素のclass属性を更新します。
+          for(let i = 0; i < elements.length; i++) {
+              let parentSpan = elements[i].parentNode;
+              parentSpan.className = "stat clickable svelte-1hsacpa info-c";
+          }
+      }
+
+      addClassToInfoButton();
+
+      // アイコンに対応するHTMLを返す関数
+      function getIconHTML(displayState, buttonText, buttonActive="fa-eye", buttonInActive="fa-eye-slash") {
+        const iconClass = displayState === "none" ? buttonInActive : buttonActive;
+        return `<span class="icon"><i class="fas ${iconClass} svelte-15752pe"></i></span> <span>${buttonText}</span>`;
+      }
+
+      // 新たなボタンを作成し設定する関数
+      function createAndConfigureButton(btn, displayState, className="button btn-setting svelte-15752pe", buttonActive="fa-eye", buttonInActive="fa-eye-slash") {
+        let newButton = document.createElement("button");
+        newButton.id = btn.id; // idを設定
+        newButton.className = `${className}`; // クラス名を設定　// ←ここが原因でセッティングボタン消えてる
+        //newButton.innerHTML = getIconHTML(displayState, btn.buttonText, buttonActive, buttonInActive); // ボタンの中身を設定
+        newButton.innerHTML = getIconHTML(displayState, btn.buttonText, btn.active, btn.inActive); // ボタンの中身を設定
+        newButton.onclick = function() {
+
+          if (btn.type === "hidden") {
+            let newDisplayState = hiddenButtonClick(btn.id, btn.className);
+            newButton.innerHTML = getIconHTML(newDisplayState, btn.buttonText, btn.active, btn.inActive);
+          }
+          if (btn.type === "width") {
+            let newDisplayState = widthButtonClick(btn.id, btn.className);
+            newButton.innerHTML = getIconHTML(newDisplayState, btn.buttonText, btn.active, btn.inActive);
+          }
+            // let newDisplayState = hiddenButtonClick(btn.id, btn.className);
+            // newButton.innerHTML = getIconHTML(newDisplayState, btn.buttonText, buttonActive, buttonInActive);
+        };
+        return newButton;
+      }
+
+      // ボタンを生成する関数
+      function createButton(buttonContainer, btn, className="button btn-setting svelte-15752pe", buttonActive="fa-eye", buttonInActive="fa-eye-slash") {
+        let existingButton = document.querySelector("#" + btn.id);
+
+        if (!existingButton) {
+            let displayState = GM_getValue(btn.id, "inline");
+            let newButton = createAndConfigureButton(btn, displayState, className, buttonActive, buttonInActive);
+            // 新たなボタンをコンテナに追加する
+            buttonContainer.appendChild(newButton);
+        }
+      }
+
+      // スタイルを適用する関数
+      function applyStyle(targetBtn){
+        if (targetBtn.type === "hidden") {
+          let elements = document.getElementsByClassName(targetBtn.className);
+          for(let i = 0; i < elements.length; i++){
+              elements[i].style.display = GM_getValue(targetBtn.id, "inline");
+          }
+        }
+        if (targetBtn.type === "width") {
+          let displayState = GM_getValue(targetBtn.id, "inline");
+          let elements = document.getElementsByClassName(targetBtn.className);
+          // 取得した各要素に対してスタイルを適用する
+          for (let i = 0; i < elements.length; i++) {
+            if (displayState === "none") {
+              // もし現在がautoなら、130pxに設定する
+              elements[i].style.width = '130px';
+              elements[i].style.textAlign = 'center';
+              elements[i].style.margin = '2px 2px';
+              elements[i].style.padding = '5px 0px';
+
+            } else {
+              // もし現在が130pxなら、autoに設定する
+              elements[i].style.width = 'auto';
+              elements[i].style.margin = '4px 5px';
+              elements[i].style.padding = '5px 7px';
+            }
+          }
+        }
+      }
+
+      // ボタンの生成とスタイルの適用を行う関数
+      function generateAndApplyButtons(buttonContainer, buttons, className="button btn-setting svelte-15752pe", buttonActive="fa-eye", buttonInActive="fa-eye-slash") {
+        for(let btn of buttons) {
+          createButton(buttonContainer, btn, className, buttonActive, buttonInActive);
+          applyStyle(btn);
+        }
+      }
+
+
+      // 表示制御ボタンのリスト
+      let buttons = [
+          { id: "toggleButtonId1", className: "lr-acc", buttonText: "LR", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
+          { id: "toggleButtonId2", className: "hide-details", buttonText: "detail", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
+          { id: "toggleButtonId3", className: "imprv", buttonText: "+", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
+          { id: "toggleButtonId4", className: "info-c", buttonText: "info", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
+          { id: "toggleButtonId5", className: "bsr", buttonText: "!bsr", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
+          { id: "toggleButtonId6", className: "beatsaver", buttonText: "BeatSaver", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
+          { id: "toggleButtonId7", className: "replay", buttonText: "▶", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
+          { id: "toggleButtonId8", className: "stat", buttonText: "width", type: "width", active:"fa-compress", inActive:"fa-expand" },
+      ];
+
     if (!scores || paramsHash !== getParamsHash(getUrlData(window.location.href, matchSiteUrl))) return;
 
     [...document.querySelectorAll('.ranking.songs .table-item')]
       .forEach((el, idx) => {
+
         if (!scores?.[idx]?.maxScore || !scores?.[idx]?.baseScore) return;
 
         const songImage = el.querySelector('.song-image');
@@ -240,7 +391,8 @@
 
             const beatSaverButton = window.document.createElement('button');
             beatSaverButton.title = 'BeatSaver';
-            beatSaverButton.className = `stat clickable ${existingElClassName}`;
+            //beatSaverButton.className = `stat clickable ${existingElClassName}`;
+            beatSaverButton.className = `stat clickable beatsaver ${existingElClassName}`;
             beatSaverButton.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 200 200' version='1.1'><g fill='none' stroke='#000000' stroke-width='10'> <path d='M 100,7 189,47 100,87 12,47 Z' stroke-linejoin='round'/> <path d='M 189,47 189,155 100,196 12,155 12,47' stroke-linejoin='round'/> <path d='M 100,87 100,196' stroke-linejoin='round'/> <path d='M 26,77 85,106 53,130 Z' stroke-linejoin='round'/> </g> </svg>";
             beatSaverButton.style.width = '30px';
             beatSaverButton.style.height = '30px';
@@ -333,11 +485,14 @@
             const gameMode = scores[idx].difficulty.gameMode;
             const mode = modes[gameMode] || 'Standard';
 
+            console.log(scores[idx]);
+
             // Replayボタンの作成と設定
             function createReplayButton(existingElClassName, fcAccText, accLeftText, accRightText, pausesText, link) {
               const replayButton = window.document.createElement('button');
               replayButton.title = `BL-Replay\nFcAcc: ${fcAccText}%\nAccLeft: ${accLeftText}\nAccRight: ${accRightText}\nPauses: ${pausesText}`;
-              replayButton.className = `stat clickable bsr ${existingElClassName}`;
+              //replayButton.className = `stat clickable bsr replay ${existingElClassName}`;
+              replayButton.className = `stat clickable replay ${existingElClassName}`;
               replayButton.style.color = "#FFFFFF";
               const icon = window.document.createElement('i');
               icon.className = 'fas fa-play';
@@ -347,13 +502,27 @@
               replayLink.target = "_blank";
               replayLink.prepend(replayButton);
 
+              //const songImage = el.querySelector('.song-image');
+
+              // Replayボタンと同様のリンクを作成
+              const imageLink = document.createElement('a');
+              imageLink.href = link; // ここにリンク先のURLを設定します。
+              imageLink.target = "_blank";
+              imageLink.title = `BL-Replay\nFcAcc: ${fcAccText}%\nAccLeft: ${accLeftText}\nAccRight: ${accRightText}\nPauses: ${pausesText}`;
+
+              // 画像をリンクに包む
+              imageLink.appendChild(songImage.cloneNode(true)); // 画像要素をクローンしてリンクの子要素として追加
+
+              // 元の画像要素をリンクで置き換え
+              songImage.parentNode.replaceChild(imageLink, songImage);
+
               return replayLink;
             }
 
             // LeftとRightのスコア表示エレメントの作成
             function createScoreElements(accLeftText, accRightText) {
-              const leftDiv = createScoreElement('stat acc svelte-1hsacpa', '#f14668', 'AccLeft', accLeftText);
-              const rightDiv = createScoreElement('stat acc svelte-1hsacpa', '#192dfb', 'AccRight', accRightText);
+              const leftDiv = createScoreElement('stat acc lr-acc svelte-1hsacpa', '#f14668', 'AccLeft', accLeftText);
+              const rightDiv = createScoreElement('stat acc lr-acc svelte-1hsacpa', '#192dfb', 'AccRight', accRightText);
 
               return { leftDiv, rightDiv };
             }
@@ -363,6 +532,7 @@
               div.className = className;
               div.style.backgroundColor = bgColor;
               const span = window.document.createElement('span');
+              //span.className = 'info svelte-1hsacpa imprv';
               span.className = 'info svelte-1hsacpa';
               span.style.color = 'white';
               span.textContent = text;
@@ -391,7 +561,7 @@
                   const accImprovementPercent = (beatLeaderScoreData.scoreImprovement.accuracy * 100).toFixed(2);
                   const accImprovementSpan = document.createElement('span');
                   accImprovementSpan.textContent = ` +${accImprovementPercent}%`;
-                  accImprovementSpan.className = "small info svelte-1hsacpa";
+                  accImprovementSpan.className = "small info svelte-1hsacpa imprv";
                   accSpan.appendChild(accImprovementSpan);
               }
             }
@@ -401,7 +571,7 @@
               const accLeftImprovementPercent = (beatLeaderScoreData.scoreImprovement.accLeft).toFixed(2);
               const accLeftImprovementSpan = document.createElement('span');
               accLeftImprovementSpan.textContent = ` ${accLeftImprovementPercent > 0 ? "+" : ""}${accLeftImprovementPercent}`;
-              accLeftImprovementSpan.className = "small info svelte-1hsacpa";
+              accLeftImprovementSpan.className = "small info svelte-1hsacpa imprv";
               leftDiv.appendChild(accLeftImprovementSpan);
             }
 
@@ -410,7 +580,7 @@
               const accRightImprovementPercent = (beatLeaderScoreData.scoreImprovement.accRight).toFixed(2);
               const accRightImprovementSpan = document.createElement('span');
               accRightImprovementSpan.textContent = ` ${accRightImprovementPercent > 0 ? "+" : ""}${accRightImprovementPercent}`;
-              accRightImprovementSpan.className = "small info svelte-1hsacpa";
+              accRightImprovementSpan.className = "small info svelte-1hsacpa imprv";
               rightDiv.appendChild(accRightImprovementSpan);
             }
 
@@ -437,8 +607,10 @@
                   } else {
                       missImprovementSpan.textContent = ` vs ${missImprovement}`;
                   }
-                  missImprovementSpan.className = "small info svelte-1hsacpa";
+                  //missImprovementSpan.className = "small info svelte-1hsacpa imprv";
+                  missImprovementSpan.className = "small svelte-1hsacpa imprv";
                   element.appendChild(missImprovementSpan);
+                  //console.log(element);
               });
             }
 
@@ -452,6 +624,7 @@
 
               return { missedValue, badCutValue };
             }
+
 
 
             fetchOrGetBeatLeaderScoreData(playerId, hash, difficulty, modifiedScore, mode).then(beatLeaderScoreData => {
@@ -468,10 +641,17 @@
                     // createReplayButton
                     const replayLink = createReplayButton(existingElClassName, fcAccText, accLeftText, accRightText, pausesText, link)
                     lastEl.append(replayLink);
+                    //newDiv.append(replayLink);
 
-                    // create Left Right Acc Element
+                    // create nextEL & Left Right Acc Element
+                    const nextDiv = document.createElement('div');
+                    nextDiv.className = "svelte-1hsacpa nextEl";
+                    const nextEl = firstEl.nextSibling;
+                    const parentEl = firstEl.parentNode;
+                    parentEl.insertBefore(nextDiv, nextEl);
+
                     const { leftDiv, rightDiv } = createScoreElements(accLeftText, accRightText)
-                    firstEl.append(leftDiv, rightDiv);
+                    nextDiv.append(leftDiv, rightDiv);
 
                     // addImprovementInformation
                     addImprovementInformation(firstEl, lastEl, leftDiv, rightDiv, beatLeaderScoreData);
@@ -499,6 +679,8 @@
                         console.log(link);
                     }
                 }
+                // apply style
+                generateAndApplyButtons(buttonContainer, buttons)
             });
 
         }
@@ -518,6 +700,31 @@
 
         scoreInfoChilds[0].prepend(newSpanEl);
       });
+
+      // button-containerを取得
+      let buttonContainerOrg = document.querySelector('.button-container');
+      // button-containerを取得
+      let buttonGroupOrg = document.querySelector('.button-container .btn-group');
+
+      let buttonContainer = document.createElement('div');
+
+      // 重複回避
+      let exsistingButtonContainer = document.querySelector('.button-container.btn-group.settings.svelte-1fr0rvk');
+      if (!exsistingButtonContainer){
+        buttonContainer.className = 'button-container btn-group settings svelte-1fr0rvk'; // クラス名を設定します
+        // button-containerの後に新しいdiv要素を挿入
+        buttonContainerOrg.parentNode.insertBefore(buttonContainer, buttonContainerOrg.nextSibling);
+      }
+
+      // settingボタンの作成
+      let settingBtn = { id: "btnSettingParent", className: "btn-setting", buttonText: "Setting", type: "hidden", active:"fa-cog", inActive:"fa-cog" };
+      createButton(buttonGroupOrg, settingBtn, "button svelte-15752pe", "fa-cog", "fa-cog")
+
+      // 表示制御などの各種ボタンの作成
+      generateAndApplyButtons(buttonContainer, buttons) // , buttonActive="fa-eye", buttonInActive="fa-eye-slash") {
+
+      applyStyle(settingBtn);
+
   }
 
   const fetchBeatSaverData = async (scores, params) => {
