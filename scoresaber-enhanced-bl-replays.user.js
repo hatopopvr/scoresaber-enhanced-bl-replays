@@ -23,7 +23,7 @@
 // ==UserScript==
 // @name         ScoreSaber Enhanced BL Replays (Modified by hatopopvr)
 // @namespace    hatopopvr
-// @version      0.3.0
+// @version      0.3.1
 // @description  ScoreSaber Enhancements with additional features (Based on version 0.4 of the original script)
 // @author       hatopopvr (Original author: motzel)
 // @icon         https://scoresaber.com/favicon-32x32.png
@@ -433,6 +433,10 @@
             return playerId + hash + difficulty + modifiedScore + mode;
         }
 
+        function sleep(ms) {
+          return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
         /**
          * This function is aimed to retrieve the score data including ReplayId from the BeatLeader API.
          * Note: This script has a known issue with CORS (Cross-Origin Resource Sharing) policy,
@@ -460,8 +464,10 @@
             let beatLeaderScoreData = GM_getValue(key);
 
             if (!beatLeaderScoreData) {
-                const url = `https://api.beatleader.xyz/player/${playerId}/scores?sortBy=date&page=1&count=5000&search=${hash}&diff=${difficulty}&mode=${mode}`;
-                console.log(url);
+              await sleep(1000); // Adding sleep to handle API Rate Limiting
+              // const url = `https://api.beatleader.xyz/player/${playerId}/scores?sortBy=date&page=1&count=5000&search=${hash}&diff=${difficulty}&mode=${mode}`;
+              const url = `https://api.beatleader.xyz/player/${playerId}/scores?sortBy=date&page=1&count=1&search=${hash}&diff=${difficulty}&mode=${mode}`;
+              console.log(url);
                 const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
