@@ -13,7 +13,7 @@ To customize the format, users need to edit the format settings defined within t
 
 A list of customizable variables and their descriptions can be found in the comments within the script. If you wish to make changes, use these variables to set up your desired format. For detailed instructions and examples, please refer to the comments within the script.
 
-![image](images/image_004.jpg)
+![image](images/image_004.png)
 
 ## Installation
 
