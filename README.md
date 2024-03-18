@@ -6,7 +6,7 @@ This is a modified version of the script that adds ACC to unranked scores on [Sc
 
 ![image](images/image_002.png)
 
-## New Feature: Clipboard Copy Customization
+## New Feature: Clipboard Copy Customization (Added in v0.4.0)
 A new feature added to this modified version allows users to quickly copy and share score information to the clipboard. This information includes the song name, mapper name, difficulty, ACC, PP, and replay link, among other details. Furthermore, the format of this copied information can be customized by the user.
 
 To customize the format, users need to edit the format settings defined within the script's source code. This capability allows users to adjust how information is displayed according to their preferences, such as emphasizing certain details or omitting unnecessary information.
