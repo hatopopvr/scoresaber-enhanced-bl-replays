@@ -23,7 +23,7 @@
 // ==UserScript==
 // @name         ScoreSaber Enhanced BL Replays (Modified by hatopopvr)
 // @namespace    hatopopvr
-// @version      0.3.1
+// @version      0.4.0
 // @description  ScoreSaber Enhancements with additional features (Based on version 0.4 of the original script)
 // @author       hatopopvr (Original author: motzel)
 // @icon         https://scoresaber.com/favicon-32x32.png
@@ -36,6 +36,53 @@
 // @grant        GM_getValue
 // @run-at       document-start
 // ==/UserScript==
+
+// Format for clipboard copying
+/*
+    ---List of available variables---
+    songName: Name of the song.
+    mapperName: Name of the song's mapper (creator).
+    difficulty: String representing the song's difficulty (e.g., Easy, Normal, Hard, Expert, ExpertPlus).
+    stars: Difficulty rating on ScoreSaber (e.g., "7.12★").
+    accuracy: Percentage of accuracy for the play.
+    performancePoints: Performance Points (PP) on ScoreSaber.
+    replayLink: Link to the replay (data from BeatLeader).
+    fcAcc: Percentage of accuracy at Full Combo (data from BeatLeader).
+    accLeft: Accuracy with the left hand (data from BeatLeader).
+    accRight: Accuracy with the right hand (data from BeatLeader).
+    pauses: Number of pauses during the play (data from BeatLeader).
+    totalMisses: Total number of Misses and Bad Cuts.
+    previousMisses: Total number of Misses and Bad Cuts before the score update (data from BeatLeader).
+*/
+const defaultCopyFormats = {
+  ranked: `Song: {songName} | {difficulty} | {stars}
+Mapper: {mapperName}
+Acc: {accuracy} (FC:{fcAcc}%)
+L|R: {accLeft} | {accRight}
+PP: {performancePoints}
+Miss: {totalMisses} {previousMisses} | Pauses: {pauses}
+Replay: {replayLink}`,
+  unranked: `Song: {songName} | {difficulty}
+Mapper: {mapperName}
+Acc: {accuracy} (FC:{fcAcc}%)
+L|R: {accLeft} | {accRight}
+Miss: {totalMisses} {previousMisses} | Pauses: {pauses}
+Replay: {replayLink}`
+};
+
+function getCopyFormat() {
+  // 既存の設定を取得、またはデフォルト値を使用
+  return {
+      ranked: GM_getValue("copyFormatRanked", defaultCopyFormats.ranked),
+      unranked: GM_getValue("copyFormatUnranked", defaultCopyFormats.unranked)
+  };
+}
+
+function setCopyFormat(rankedFormat, unrankedFormat) {
+  GM_setValue("copyFormatRanked", rankedFormat);
+  GM_setValue("copyFormatUnranked", unrankedFormat);
+}
+
 
 (function (window) {
   "use strict";
@@ -236,6 +283,87 @@
 
       }
 
+      function extractMissInfo(el) {
+        // 要素からMissedとBad Cutの情報を取得し、存在しない場合は0を返します。
+        const misses = el.querySelector('.misses') ? el.querySelector('.misses').title : '';
+        const missedMatch = misses.match(/Missed: (\d+)/);
+        const badCutMatch = misses.match(/Bad Cut: (\d+)/);
+        return {
+            missed: missedMatch ? parseInt(missedMatch[1], 10) : 0,
+            badCuts: badCutMatch ? parseInt(badCutMatch[1], 10) : 0,
+        };
+    }
+
+      // 追加ボタンを作成し、クリックイベントを設定するコードの例
+      function createCopyInfoButton(el, lastEl, link, beatLeaderScoreData) {
+          // 既にボタンが追加されているかをチェック
+          if (!el.querySelector('.copy-bl-info')) {
+              // ボタンを作成
+              const copyBtn = document.createElement('button');
+              copyBtn.className = 'stat clickable copy-bl-info svelte-1hsacpa'; // ここにクラスを追加
+              const icon = window.document.createElement('i');
+              icon.className = 'fas fa-copy';
+              copyBtn.style.color = "#FFFFFF";
+              copyBtn.append(icon);
+
+              // ボタンのクリックイベントにコピー機能を追加
+              copyBtn.addEventListener('click', () => {
+                  // 必要な情報を選択、存在しない場合は 'Not available' を使用
+                  const songName = el.querySelector('.song-name') ? el.querySelector('.song-name').textContent : '';
+                  const mapperName = el.querySelector('.mapper-name') ? el.querySelector('.mapper-name').textContent : '';
+                  const difficulty = el.querySelector('.tag') ? el.querySelector('.tag').getAttribute('title') : '';
+                  const stars = el.querySelector('.tag') ? el.querySelector('.tag').textContent.trim() : '';
+                  const accuracy = el.querySelector('.stat.acc') ? el.querySelector('.stat.acc').textContent : '';
+                  const performancePoints = el.querySelector('.stat.ranked .info') ? el.querySelector('.stat.ranked .info').textContent : '';
+                  const missInfo = extractMissInfo(el);
+                  const replayLink = link ? link : 'Replay link not available';
+                  // BeatLeaderからの追加のスコア情報
+                  const fcAccText = beatLeaderScoreData.fcAccuracy !== undefined ? (beatLeaderScoreData.fcAccuracy * 100).toFixed(2) : 'N/A';
+                  const accLeftText = beatLeaderScoreData.accLeft !== undefined ? beatLeaderScoreData.accLeft.toFixed(2) : 'N/A';
+                  const accRightText = beatLeaderScoreData.accRight !== undefined ? beatLeaderScoreData.accRight.toFixed(2) : 'N/A';
+                  const pausesText = beatLeaderScoreData.pauses !== undefined ? beatLeaderScoreData.pauses : 'N/A';
+                  // BeatLeaderのデータを使用して、改善前後のMiss数の計算
+                  const totalNotesImprovement = parseInt(beatLeaderScoreData.scoreImprovement.missedNotes, 10) + parseInt(beatLeaderScoreData.scoreImprovement.badCuts, 10);
+                  const totalMisses = parseInt(missInfo.missed, 10) + parseInt(missInfo.badCuts, 10);
+                  const totalMissesText = totalMisses === 0 ? `FC` : `${totalMisses}`;
+                  const missImprovement = totalMisses - totalNotesImprovement;
+                  const previousMissesText = missImprovement === 0 ? 'vs FC' : `vs ${missImprovement}`;
+
+                  var copyText;
+
+                  // コピーするテキストのフォーマットにユーザー設定を使用
+                  const formats = getCopyFormat();
+                  let format = performancePoints !== '' ? formats.ranked : formats.unranked;
+
+                  format = format.replace(/{songName}/g, songName)
+                              .replace(/{mapperName}/g, mapperName)
+                              .replace(/{difficulty}/g, difficulty)
+                              .replace(/{stars}/g, stars)
+                              .replace(/{accuracy}/g, accuracy)
+                              .replace(/{fcAcc}/g, fcAccText)
+                              .replace(/{accLeft}/g, accLeftText)
+                              .replace(/{accRight}/g, accRightText)
+                              .replace(/{performancePoints}/g, performancePoints)
+                              .replace(/{totalMisses}/g, totalMissesText)
+                              .replace(/{previousMisses}/g, previousMissesText)
+                              .replace(/{pauses}/g, pausesText)
+                              .replace(/{replayLink}/g, replayLink);
+
+                  copyText = format;
+
+                  // クリップボードにコピー
+                  navigator.clipboard.writeText(copyText).then(() => {
+                      alert('[Copied to clipboard]\n\n' + copyText);
+                  }).catch(err => {
+                      alert('[Failed to copy score info to clipboard]');
+                      console.error('Failed to copy score info to clipboard', err);
+                  });
+              });
+
+              // ボタンをDOMに追加
+              lastEl.append(copyBtn);
+          }
+      }
 
       // infoボタンにclass付与
       function addClassToInfoButton(){
@@ -340,6 +468,7 @@
           { id: "toggleButtonId5", className: "bsr", buttonText: "!bsr", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
           { id: "toggleButtonId6", className: "beatsaver", buttonText: "BeatSaver", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
           { id: "toggleButtonId7", className: "replay", buttonText: "▶", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
+          { id: "toggleButtonId9", className: "copy-bl-info", buttonText: "copy", type: "hidden", active:"fa-eye", inActive:"fa-eye-slash" },
           { id: "toggleButtonId8", className: "stat", buttonText: "width", type: "width", active:"fa-compress", inActive:"fa-expand" },
       ];
 
@@ -408,8 +537,7 @@
         }
 
         // skip if replayBtn is already added
-        if (lastEl.querySelector('.replay')) return;
-
+      //   if (lastEl.querySelector('.replay')) return;
 
         // Function to extract necessary information from the provided data and create a new object
         function extractRequiredData(data) {
@@ -632,7 +760,6 @@
             }
 
 
-
             fetchOrGetBeatLeaderScoreData(playerId, hash, difficulty, modifiedScore, mode).then(beatLeaderScoreData => {
                 if (beatLeaderScoreData !== null) {
                     // console.log(beatLeaderScoreData);
@@ -660,10 +787,9 @@
                     nextDiv.append(leftDiv, rightDiv);
 
                     // addImprovementInformation
-                    addImprovementInformation(firstEl, lastEl, leftDiv, rightDiv, beatLeaderScoreData);
-
+                    addImprovementInformation(firstEl, lastEl, leftDiv, rightDiv, beatLeaderScoreData); 
+                    createCopyInfoButton(el, lastEl, link, beatLeaderScoreData);
                     console.log(link);
-
                 } else {
                     if (scores[idx].pp && scores[idx].rank <= 500) {
                         const link = `https://www.replay.beatleader.xyz/?id=${scores[idx].beatSaver.id}&difficulty=${scores[idx].beatSaver.diff.difficulty}&playerID=${params.playerId}`
@@ -686,8 +812,8 @@
                     }
                 }
                 // apply style
-                generateAndApplyButtons(buttonContainer, buttons)
-            });
+                generateAndApplyButtons(buttonContainer, buttons);
+          });
 
         }
 
@@ -706,7 +832,7 @@
 
         scoreInfoChilds[0].prepend(newSpanEl);
       });
-
+      
       // button-containerを取得
       let buttonContainerOrg = document.querySelector('.button-container');
       // button-containerを取得
@@ -715,11 +841,16 @@
       let buttonContainer = document.createElement('div');
 
       // 重複回避
-      let exsistingButtonContainer = document.querySelector('.button-container.btn-group.settings.svelte-1fr0rvk');
-      if (!exsistingButtonContainer){
-        buttonContainer.className = 'button-container btn-group settings svelte-1fr0rvk'; // クラス名を設定します
-        // button-containerの後に新しいdiv要素を挿入
-        buttonContainerOrg.parentNode.insertBefore(buttonContainer, buttonContainerOrg.nextSibling);
+      let existingButtonContainer = document.querySelector('.button-container.btn-group.settings.svelte-1fr0rvk');
+      if (!existingButtonContainer) {
+          buttonContainer.className = 'button-container btn-group settings svelte-1fr0rvk'; // クラス名を設定
+          // Flexboxを使用して中央揃えにするスタイルを追加
+          buttonContainer.style.display = 'flex';
+          buttonContainer.style.justifyContent = 'center';
+          buttonContainer.style.flexWrap = 'wrap';
+
+          // button-containerの後に新しいdiv要素を挿入
+          buttonContainerOrg.parentNode.insertBefore(buttonContainer, buttonContainerOrg.nextSibling);
       }
 
       // settingボタンの作成
@@ -727,9 +858,10 @@
       createButton(buttonGroupOrg, settingBtn, "button svelte-15752pe", "fa-cog", "fa-cog")
 
       // 表示制御などの各種ボタンの作成
-      generateAndApplyButtons(buttonContainer, buttons) // , buttonActive="fa-eye", buttonInActive="fa-eye-slash") {
+      generateAndApplyButtons(buttonContainer, buttons); // , buttonActive="fa-eye", buttonInActive="fa-eye-slash")
 
       applyStyle(settingBtn);
+
 
   }
 
